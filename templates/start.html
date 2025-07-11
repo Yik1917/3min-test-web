@@ -1,0 +1,26 @@
+<!-- start.html -->
+{% extends 'base.html' %}   
+
+{% block head %}
+<title>選擇題測驗</title>
+{% endblock %}
+
+{% block body %}
+<div class="content">
+    <h1>1 分鐘測驗</h1>
+
+    <form id="lesson-chosen" action="/start" method="POST">
+        <select id="lesson" name="lesson" multiple>
+            <option value="ask">問句</option>
+            <option value="special_verb">常用特殊動詞</option>
+            <option value="ving">動名詞</option>
+            <option value="compare">比較關係</option>
+            <option value="correlative_word">對等選擇詞(either, neither...)</option>
+        </select>
+        <input type="submit" value="submit">
+    </form>
+
+    <script>
+    </script>
+</div>
+{% endblock %}
