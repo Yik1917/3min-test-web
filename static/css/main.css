@@ -21,12 +21,17 @@ h1, h2 {
     text-align: center;
 }
 
+h3 {
+    color: #2c3e50;
+    text-align: right;
+}
+
 /* 表單與選擇器 */
 form {
     margin-top: 20px;
 }
 
-select {
+.multiple-select {
     width: 100%;
     height: 120px;
     padding: 10px;
@@ -34,6 +39,16 @@ select {
     border-radius: 6px;
     border: 1px solid #ccc;
 }
+
+.single-select {
+    width: 100%; /* ✅ 單選欄位寬度較小 */
+    height: 40px;
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
 
 input[type="text"] {
     width: 100%;
@@ -114,3 +129,25 @@ a {
 a:hover {
     background-color: #2980b9;
 }
+
+.chart-wrapper {
+  display: flex;
+  justify-content: center;    /* 讓內容置中 */
+  margin-top: 30px;
+}
+
+.chart-container {
+  width: 100%;
+  max-width: 800px;           /* 最大寬度 */
+  padding: 20px;
+  background: #f0f8ff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.chart-container canvas {
+  width: 100% !important;     /* 讓 canvas 撐滿容器 */
+  height: auto !important;
+  display: block;
+}
+

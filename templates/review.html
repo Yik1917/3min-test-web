@@ -1,0 +1,39 @@
+<!-- review.html -->
+{% extends 'base.html' %}   
+
+{% block head %}
+<title>查看作答情況</title>
+{% endblock %}
+
+{% block body %}
+<div class="content">
+    <form id="student-chosen" action="/review" method="POST">
+        <select class="single-select" name="chosen-time">
+            <option disabled selected>....</option>
+            {% for record in user_records %}
+                <option value="{{record.created_at}}" {% if selected == "{{record.created_at}}" %}selected{% endif %}>{{record.created_at.strftime("%m-%d %H:%M")}}</option>
+            {% endfor %}
+        </select>
+        <input type="submit" value="submit">
+    </form>
+</div>
+
+<div id='inserted-content'></div>
+<div style="text-align: center;">
+    <a href="/review_mode_select">查看其他類型資料</a>
+    <a href="/start_review">查看其他用戶</a>
+</div>
+
+{% if result %}
+
+<script>
+    const result_html = `{{ result | tojson | safe }}`;
+    document.getElementById('inserted-content').innerHTML = result_html;
+</script>
+
+{% else %}
+
+<p style="text-align: center;">沒有資料</p>
+
+{% endif %}
+{% endblock %}

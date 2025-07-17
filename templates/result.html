@@ -7,16 +7,15 @@
 
 {% block body %}
 <div class="content">
-    <h2>你的測驗結果如下：<strong>{{score}} 分!!</strong></h2>
+    <h2>測驗結果：<strong>{{score}} 分!!</strong></h2>
 
     {% for item in results %}
         <div class="result-block {% if '❌' in item %}wrong{% endif %}">
             {{ item | safe }}
         </div>
     {% endfor %}
-
-    <div style="text-align: center;">
-        <a href="/">再測一次</a>
-    </div>
+</div>
+<div style="text-align: center;">
+    <a href="/">再測一次</a>
 </div>
 {% endblock %}

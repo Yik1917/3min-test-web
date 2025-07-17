@@ -1,0 +1,20 @@
+<!-- review_mode_select.html -->
+{% extends 'base.html' %}   
+
+{% block head %}
+<title>查看作答情況</title>
+{% endblock %}
+
+{% block body %}
+<div class="content">
+    <h3>學生：{{username}}</h3>
+    <form id="mode-chosen" action="/review_mode_select" method="POST">
+        <button name="mode" value="chart">統計資料</button>
+        <button name="mode" value="certain">特定時間作答紀錄</button>
+    </form>
+
+    <script>
+    </script>
+</div>
+{% endblock %}
+    

@@ -1,0 +1,75 @@
+<!-- chart_review.html -->
+{% extends 'base.html' %}
+
+{% block head %}
+<title>查看作答情況</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block body %}
+<div class="content">
+    <form id="lesson-chosen" action="/chart_review" method="POST">
+        <select class="single-select" name="lesson">
+            <option disabled selected>....</option>
+            <option value="ask">問句</option>
+            <option value="special_verb">常用特殊動詞</option>
+            <option value="ving">動名詞</option>
+            <option value="compare">比較關係</option>
+            <option value="correlative_word">對等選擇詞(either, neither...)</option>
+        </select>
+        <input type="submit" value="submit">
+    </form>
+</div>
+{% if time %}
+<div class="chart-wrapper">
+  <div class="chart-container">
+    <h3>學生：{{username}} 測驗範圍：{{lesson}}</h3>
+    <canvas id="myChart" height="300"></canvas>
+  </div>
+</div>
+
+<script>
+    const labels = {{time | tojson}};
+    const values1 = {{value1 | tojson}};
+    const values2 = {{value2 | tojson}};
+
+    const ctx = document.getElementById('myChart').getContext('2d');
+    new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: labels,
+        datasets: [
+        {
+            label: '答對次數',
+            data: values1,
+            backgroundColor: 'rgba(75, 192, 192, 0.6)'
+        },
+        {
+            label: '答錯次數',
+            data: values2,
+            backgroundColor: 'rgba(255, 99, 132, 0.6)'
+        }
+        ]
+    },
+    options: {
+        responsive: true,
+        scales: {
+        y: {
+            beginAtZero: true,
+        }
+        }
+    }
+    });
+    </script>
+{% else %}
+
+<p style="text-align: center;">沒有資料</p>
+
+{% endif %}
+
+<div style="text-align: center;">
+    <a href="/review_mode_select">查看其他類型資料</a>
+    <a href="/start_review">查看其他用戶</a>
+</div>
+
+{% endblock %}

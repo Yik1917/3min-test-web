@@ -27,8 +27,13 @@
                         {{opt}}
                     </label><br>
                 {% endfor %}
+            {% elif q.type == 'reorder' %}
+                <p><strong>句子重組</strong></p>
+                <p>Q{{loop.index}}. {{q.question | safe}}  答對率：{{percent | round(2) * 100}}%</p>
+                <input type="text" name="{{q.id}}">
             {% endif %}
         {% endfor %}
+        <input type="hidden" name="scope" value="{{scope}}">
         <input type="submit" value="submit">
     </form>
 

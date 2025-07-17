@@ -2,15 +2,15 @@
 {% extends 'base.html' %}   
 
 {% block head %}
-<title>選擇題測驗</title>
+<title>測驗</title>
 {% endblock %}
 
 {% block body %}
 <div class="content">
-    <h1>1 分鐘測驗</h1>
+    <h1>3 分鐘測驗</h1>
 
     <form id="lesson-chosen" action="/start" method="POST">
-        <select id="lesson" name="lesson" multiple>
+        <select class="multiple-select" name="lesson" multiple>
             <option value="ask">問句</option>
             <option value="special_verb">常用特殊動詞</option>
             <option value="ving">動名詞</option>

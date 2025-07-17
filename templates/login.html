@@ -1,0 +1,27 @@
+<!-- login.html -->
+{% extends 'base.html' %}   
+
+{% block head %}
+<title>登入</title>
+{% endblock %}
+
+{% block body %}
+<div class="content">
+    {% with messages = get_flashed_messages() %}
+        {% for message in messages %}
+            <p style="color: red; font-size: 20px; text-align: center;">{{message}}<br><br></p>
+        {% endfor %}
+    {% endwith %}
+        
+    <form id="login" action="/login" method="POST">
+        <p>帳號<br></p>
+        <input type="text" name="username">
+        <p>密碼<br></p>
+        <input type="text" name="password">
+        <input type="submit" value="submit">
+    </form>
+
+    <script>
+    </script>
+</div>
+{% endblock %}
