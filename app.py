@@ -8,19 +8,12 @@ import secrets
 from random import sample
 from bs4 import BeautifulSoup
 
-#Flask：建立網頁應用程式
-#render_template：用來載入 .html 檔案
-#request：取得使用者傳過來的資料
-#redirect：讓頁面重新導向
-#SQLAlchemy：Flask 連接資料庫的工具
-#os：用來取得目前程式的資料夾路徑
-
 app = Flask(__name__) #啟動網站
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'data.db') #設定 Flask 要用哪個資料庫。這裡是 SQLite，檔案叫 data.db，會存在 app.py 同一層
 db = SQLAlchemy(app) #建立一個 db 物件來操作資料庫
 app.secret_key = secrets.token_hex(16)
-app.permanent_session_lifetime = timedelta(minutes=30)
+app.permanent_session_lifetime = timedelta(minutes=30) #登入時間限制為30分鐘
 
 question_bank = {
     'ask': [
@@ -62,29 +55,35 @@ question_bank = {
     ]
 }
 picked_questions = []
-picked_num = 5
+picked_num = 5 #quiz題數
+
+#User.records的初始值
 records_template_dict = [{}, {}]
 for lesson in question_bank.keys():
     records_template_dict[0][lesson], records_template_dict[1][lesson] = {}, {}
 records_template_str = json.dumps(records_template_dict)
 
+#利用id匹配scope
 def scope_match(id):
     for lesson in question_bank.keys():
         for question in question_bank[lesson]:
             if question['id'] == id:
                 return lesson
 
+#使用者資料
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(10), unique=True)
     password = db.Column(db.String(18))
     records = db.Column(db.Text, default=records_template_str)
 
+#全體題目對錯題數
 class Question(db.Model):
     id = db.Column(db.String(1000), primary_key=True)
     numOfcorrect = db.Column(db.Integer, default=0)
     numOfwrong = db.Column(db.Integer, default=0)
 
+#使用者每次作答紀錄
 class Record(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(18))
@@ -105,24 +104,61 @@ def login():
         user = request.form.get('username')
         pwd = request.form.get('password')
         u = User.query.filter_by(username=user).first()
-        if u and u.username == "yumik" and u.password == "3310":
+
+        if u and u.username == "yumik" and u.password == "3310": #教師登入
             return redirect(url_for('start_review'))
-        if u and u.password == pwd:
+
+        if u and u.password == pwd: #學生登入
             session.permanent = True
-            session['user'] = user
+            session['user'] = user #儲存學生登入資料
             return redirect(url_for('start'))
         else:
             flash("帳號或密碼錯誤")
+
     return render_template('login.html')
+
+@app.route('/start', methods=['GET', 'POST'])
+def start():
+    if 'user' not in session: #無登入或超過登入時間
+        flash("請先登入")
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        global picked_questions
+        chosen = request.form.getlist('lesson')
+        picked_questions.clear()
+        for lesson in chosen:
+            picked_questions.extend(question_bank[lesson])
+        scope = '-'.join(chosen)
+        picked_questions = sample(picked_questions, picked_num) #根據選擇的範圍隨機出題
+
+        #計算被選擇的題目目前全體答對率
+        Percents = []
+        for q in picked_questions:
+            Q = Question.query.get(q['id'])
+            if Q:
+                if Q.numOfcorrect+Q.numOfwrong == 0:
+                    Percents.append(0.0)
+                else:
+                    Percents.append(Q.numOfcorrect/(Q.numOfcorrect+Q.numOfwrong))
+            else:
+                new_Q = Question(id=q['id'])
+                db.session.add((new_Q))
+                db.session.commit()
+                Percents.append(0.0)
+        questionAndpercent_combined = list(zip(picked_questions, Percents))
+        return render_template('quiz.html', combined=questionAndpercent_combined, scope=scope)
+
+    return render_template('start.html')
 
 @app.route('/start_review', methods=['GET', 'POST'])
 def start_review():
     if request.method == 'POST':
         chosen_student = request.form.get('student')
-        session['chosen-student'] = chosen_student
+        session['chosen-student'] = chosen_student #紀錄已選擇的學生
         return redirect(url_for('review_mode_select'))
     elif request.method == 'GET':
-        students = User.query.filter(User.id > 1).all()
+        students = User.query.filter(User.id > 1).all() #教師帳號id為1，學生id皆大於1
         return render_template('start_review.html', students=students)
 
 @app.route('/review_mode_select', methods=['GET', 'POST'])
@@ -142,6 +178,8 @@ def chart_review():
         lesson = request.form.get('lesson')
         stat_record = json.loads(User.query.filter_by(username=session['chosen-student']).first().records)
         print(stat_record)
+
+        #拆成3個list，方便繪製長條圖(time由小排到大)
         time = sorted(set(stat_record[0][lesson].keys()) | set(stat_record[1][lesson].keys()))
         value1 = [stat_record[0][lesson].get(date, 0) for date in time]
         value2 = [stat_record[1][lesson].get(date, 0) for date in time]
@@ -151,78 +189,60 @@ def chart_review():
 
 @app.route('/review', methods=['GET', 'POST'])
 def review():
+    #挑選七天內的作答紀錄
     now = datetime.utcnow()
     seven_days_ago = now - timedelta(days=7)
     user_records = Record.query.filter(
         Record.username == session['chosen-student'],
         Record.created_at >= seven_days_ago
     ).order_by(Record.created_at).all() 
+
     if request.method == 'POST':
         chosen_time_str = request.form.get('chosen-time')
         chosen_time = datetime.fromisoformat(chosen_time_str)
         for record in user_records:
             if record.created_at == chosen_time:
                 soup = BeautifulSoup(record.result, 'html.parser')
+
+                #只取class="content"的區塊
                 partials = soup.select('.content')
                 content_div = partials[0]
+
+                #插入其他資訊
                 h2_tag = content_div.find('h2')
                 if h2_tag:
                     new_tag = soup.new_tag('h3')
                     new_tag.string = f"學生：{session['chosen-student']} 建立時間：{chosen_time.strftime("%m-%d %H:%M")} 測驗範圍：{record.scope}"
                     h2_tag.insert_after(new_tag)
+
                 partial_html = str(content_div)
                 return render_template('review.html', user_records=user_records, result=partial_html, username=session['chosen-student'])
     return render_template('review.html', user_records=user_records, result=None, username=session['chosen-student'])
 
-@app.route('/start', methods=['GET', 'POST'])
-def start():
-    if 'user' not in session:
-        flash("請先登入")
-        return redirect(url_for('login'))
-    if request.method == 'POST':
-        global picked_questions
-        chosen = request.form.getlist('lesson')
-        picked_questions.clear()
-        for lesson in chosen:
-            picked_questions.extend(question_bank[lesson])
-        scope = '-'.join(chosen)
-        picked_questions = sample(picked_questions, picked_num)
-        Percents = []
-        for q in picked_questions:
-            Q = Question.query.get(q['id'])
-            if Q:
-                if Q.numOfcorrect+Q.numOfwrong == 0:
-                    Percents.append(0.0)
-                else:
-                    Percents.append(Q.numOfcorrect/(Q.numOfcorrect+Q.numOfwrong))
-            else:
-                new_Q = Question(id=q['id'])
-                db.session.add((new_Q))
-                db.session.commit()
-                Percents.append(0.0)
-            questionAndpercent_combined = list(zip(picked_questions, Percents))
-        return render_template('quiz.html', combined=questionAndpercent_combined, scope=scope)
-    return render_template('start.html')
-
 @app.route('/result', methods=['POST'])
 def result():
-    if 'user' not in session:
+    if 'user' not in session: #無登入或超過登入時間
         flash("請先登入")
         return redirect(url_for('login'))
+
     results = []
     score = 0
     scope_set = request.form.get("scope")
     U = User.query.filter_by(username=session['user']).first()
-    stat_record = json.loads(U.records)
+
+    stat_record = json.loads(U.records) #records由字串轉為list of two dicts
     stat_correct_dict = stat_record[0]
     stat_wrong_dict = stat_record[1]
     for i in range(len(picked_questions)):
         q = picked_questions[i]
         user_ans = request.form.get(q['id']) or "未作答"
+
+        #避免學生輸入的時候多打空格，導致錯誤
         corrects = q['answer'].copy()
         for k in range(len(corrects)):
             corrects[k] = corrects[k].replace(' ', '')
-            
+        
+        #驗證答案
         Q = Question.query.get(q['id'])
         if user_ans.replace(' ', '') in corrects:
             result = f"Q{i+1}: {q['question']}✅your ans: {user_ans}"
@@ -236,8 +256,8 @@ def result():
         results.append(result)
         del corrects
 
+        #依單題作答時間，紀錄範圍答題情況
         scope = scope_match(q['id'])
-        #print(scope)
         time = datetime.utcnow().strftime("%m-%d")
         if time not in stat_correct_dict[scope].keys() and time not in stat_wrong_dict[scope].keys():
             stat_correct_dict[scope][time], stat_wrong_dict[scope][time] = 0, 0
@@ -247,9 +267,12 @@ def result():
         else:   
             stat_wrong_dict[scope][time] -= 1
             print('minus')
-    U.records = json.dumps(stat_record)
+    U.records = json.dumps(stat_record) #list of two dicts轉回字串
+
+    #儲存學生該次作答情況
     saved_html = render_template('result.html', score=score, results=results)
     newRecord = Record(username=session['user'], result=saved_html, scope=scope_set)
+
     db.session.add(newRecord)
     db.session.commit()
     return saved_html
